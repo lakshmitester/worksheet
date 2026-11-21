@@ -1,0 +1,31 @@
+# Decision Log
+
+Source: `concepts_brief.md` (2026-11-14), section "Decisions to record before Day 1".
+Recorded: 2026-11-20.
+
+Status key:
+- **Decided**: confirmed by the author.
+- **Adopted**: the brief's recommendation, taken as the default. It can be revisited before the phase that needs it.
+- **Open**: needs the author before the phase noted.
+
+| # | Decision | Status | Choice |
+|---|---|---|---|
+| 1 | Guest write path | Adopted | Token + device-secret `SECURITY DEFINER` RPCs (`join_session`, `get_session_payload`, `submit_answer`, `submit_final`). Guests have no table policies, and the service role is never used on this path. Transport: browser → Supabase RPC directly with the publishable key. Revisit a versioned route handler only if WAF rules are needed. |
+| 2 | Job queue | Adopted | Postgres `jobs` table claimed with `FOR UPDATE SKIP LOCKED`, triggered by `after()` on enqueue plus a sweeper cron every minute. Upstash Redis is used only for rate limiting. QStash is the documented fallback. |
+| 3 | Tenant context | Adopted | Membership lookup through `private.user_center_ids()` (STABLE, SECURITY DEFINER, `search_path = ''`). Many-to-many `memberships`. No `center_id` JWT claim. |
+| 4 | Bank segmentation | **Decided** | One `items` table with `visibility in ('shared','tenant')`, a CHECK tying `shared` to `center_id IS NULL`, per-command policies (never `FOR ALL`) and negative tests. |
+| 5 | On-demand generation scope | **Decided** | Deferred to Phase 3. Phases 1-2 use the offline CLI bank plus deterministic assembly. Unmet requests are logged for overnight batch generation. |
+| 6 | Verification specification | Adopted (thresholds open) | Deterministic gates, then a blind verifier from a different model family (temp 0, never sees the key), then human sampling. Verifier pass mark: reject ≥99% of mutations, wrongly reject ≤5% of golden items. Batch quarantine at >15% disagreement. **Open before Day 8:** wrong-key target of 1% (sample 300) or 0.5% (sample 600), and the generator and verifier providers. |
+| 7 | Phase 1 GL 11+ item types | Adopted (catalogue to write) | Comprehension MCQ (passage-linked), spelling "find the error", punctuation "find the error" (with an "N" option), closed cloze subtypes, synonym MCQ. **Open before Day 6:** one catalogue entry per type (example, schema, answer format, scoring rule, PDF and player layout, checks). |
+| 8 | Cloze normalisation | Adopted | Policy v1: trim, case-fold, straight/curly quotes unified, UK/US variants only where both are listed in `accepted_answers`, no edit-distance tolerance. Tutor overrides apply only within a session. |
+| 9 | PDF | Adopted (runtime pending spike) | `@myriaddreamin/typst-ts-node-compiler` in a Vercel Node function (lhr1); Day 3 spike decides. Fallback: a container running the Typst CLI. Cache key: `sha256(worksheet_version_id, brand_version_id, variant, template_version, typst_version, font_bundle_version)`. All text passes as data. Static per-center watermark. A4. Targets: cached fetch p95 < 300 ms, first render p95 < ~10 s. |
+| 10 | Session lifecycle | Adopted (details open) | A single sitting per link. Tutor opens and closes it. Deadlines enforced by the server, late answers stored and flagged. Grace window of a few minutes after close. Resume via device secret. **Open before Phase 2:** retakes, what students see at the end, exact grace length. |
+| 11 | Student identity | **Decided** | Per-session alias only, with no cross-session linking. Results are per session. The pseudonymisation purge job runs N days after close (**N open**, set in the DPIA). A tutor-managed roster of pseudonymous codes can be added later as an additive migration. Note: the brief preferred a roster, because the BRD promises "student tracking". That promise is restated as per-session results. |
+| 12 | Quota unit | Adopted | One generated item that passed verification. Bank pulls are unmetered. Not relevant until Phase 3 (see #5). Pilots get a hard cap from the usage ledger. |
+| 13 | Environments & deploy | **Decided** (framework) / Adopted (rest) | **Next 16, with stable Turbopack builds** (`proxy.ts` replaces `middleware.ts`). Node 22 LTS. Vercel region `lhr1`. Two London Supabase projects (staging and prod), with Preview deploys pointed at staging. Migrations only through `supabase migration new`, expand/contract only. Deploy freezes: weekdays 15:30-20:30 and Sat 08:00-14:00 UK time. |
+| 14 | Meaning of "region" in Phase 4 | Open (before Phase 4) | `centers.region` is stored from migration 001 so any interpretation stays additive. |
+
+## Business items noted (not blocking engineering)
+- ARR target ($255k / 250 centers ≈ $85 per center per month) exceeds the $79 Standard tier. Re-base the target or schedule the Enterprise features.
+- Price in GBP for the UK launch.
+- Build a requirements-traceability table (FR/NFR → phase / status / rationale) in the design doc.
