@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Worksheet
 
-## Getting Started
+Multi-tenant SaaS for UK English tuition centers: branded 11+ worksheets as PDFs and zero-login live assessments with automatic scoring.
 
-First, run the development server:
+- Requirements: `BRD for this....pdf`
+- Architecture review and build plan: `concepts_brief.md`
+- Decision log: `docs/decisions.md`
+
+## Stack
+
+Next.js 16 (App Router) on Vercel (`lhr1`), Supabase Postgres 17 (London) with RLS from migration 001, Zod, Vitest, Playwright, pgTAP. Node 22 is pinned through `devEngines`, and pnpm downloads it automatically.
+
+## Prerequisites
+
+- pnpm 12
+- Docker Desktop, needed for the local Supabase stack (`supabase start`, `db reset`, `test db`)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local      # fill in from `pnpm exec supabase status`
+pnpm exec supabase start
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script                         | Purpose                                                    |
+| ------------------------------ | ---------------------------------------------------------- |
+| `pnpm dev` / `build` / `start` | Next.js                                                    |
+| `pnpm lint` / `typecheck`      | ESLint (flat config) / `tsc --noEmit`                      |
+| `pnpm test`                    | Vitest unit tests                                          |
+| `pnpm e2e`                     | Playwright (starts the dev server automatically)           |
+| `pnpm db:reset`                | Rebuild the local DB from migrations + `supabase/seed.sql` |
+| `pnpm test:db`                 | pgTAP tests in `supabase/tests`                            |
+| `pnpm db:types`                | Regenerate `src/lib/database.types.ts`                     |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Rules worth knowing
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Schema changes go only through `pnpm exec supabase migration new <name>`. Every migration must be expand/contract compatible with the previous release.
+- Service-role code lives only in `src/server/privileged/*`. ESLint blocks imports of it from anywhere else.
+- No deploys during UK peak windows: weekdays 15:30-20:30, Saturday 08:00-14:00.
