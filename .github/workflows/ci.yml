@@ -9,6 +9,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Public values (shipped to browsers anyway) for the staging project, so the
+# app can boot in CI. The secret key is NOT here; tests that need it skip.
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://gbgszkedleypscimagfr.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_XeW6eS3A-kmrBs58Q2iwTw_89BPoQO0
+
 jobs:
   app:
     name: Lint, typecheck, unit tests, build

@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "node:fs";
+
+// Local runs read Supabase settings from .env.local (CI provides env vars).
+if (fs.existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const PORT = Number(process.env.PORT ?? 3000);
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
